@@ -28,6 +28,13 @@ if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/deps/glm")
     find_package(glm REQUIRED)
 endif()
 
+# Add Bullet Physics sources
+file(GLOB BULLET_SOURCES 
+    deps/bullet3/src/btBulletCollisionAll.cpp
+    deps/bullet3/src/btBulletDynamicsAll.cpp
+    deps/bullet3/src/btLinearMathAll.cpp
+)
+
 # Main executable with ECS
 add_executable(CubeRendererECS 
     src/main_ecs.cpp
@@ -35,11 +42,14 @@ add_executable(CubeRendererECS
     src/Camera.cpp
     src/CubeRenderer.cpp
     src/ECS/Component.cpp
+    src/ECS/PhysicsSystem.cpp
+    ${BULLET_SOURCES}
 )
 
 target_include_directories(CubeRendererECS PRIVATE 
     ${CMAKE_CURRENT_SOURCE_DIR}/include
     ${CMAKE_CURRENT_SOURCE_DIR}/deps/glm
+    ${CMAKE_CURRENT_SOURCE_DIR}/deps/bullet3/src
 )
 
 target_link_libraries(CubeRendererECS 

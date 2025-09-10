@@ -5,6 +5,7 @@
 #include "../System.h"
 #include "../Components/Transform.h"
 #include "../Components/Velocity.h"
+#include "../Components/RigidBody.h"
 
 namespace ECS {
 
@@ -22,6 +23,12 @@ public:
         auto entities = world->GetEntitiesWithComponents(mask);
         
         for (auto& entity : entities) {
+            auto* rb = world->GetComponent<RigidBody>(entity);
+            
+            if (rb && rb->bulletBody) {
+                continue;
+            }
+            
             auto* transform = world->GetComponent<Transform>(entity);
             auto* velocity = world->GetComponent<Velocity>(entity);
             

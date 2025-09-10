@@ -5,6 +5,7 @@
 #include <bitset>
 #include <memory>
 #include "Entity.h"
+#include "Component.h"
 
 namespace ECS {
 

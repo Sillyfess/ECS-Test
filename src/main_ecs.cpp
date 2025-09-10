@@ -21,6 +21,9 @@
 #include "ECS/Systems/MovementSystem.h"
 #include "ECS/Systems/BoundsSystem.h"
 #include "ECS/Systems/RenderSystem.h"
+#include "ECS/Components/RigidBody.h"
+#include "ECS/Components/Collider.h"
+#include "ECS/Systems/PhysicsSystem.h"
 
 #include <iostream>
 #include <vector>
@@ -82,6 +85,10 @@ int main() {
     g_inputSystem = inputSystem.get();
     world.AddSystem(std::move(inputSystem));
     
+    auto physicsSystem = std::make_unique<ECS::PhysicsSystem>();
+    ECS::PhysicsSystem* physicsSysPtr = physicsSystem.get();
+    world.AddSystem(std::move(physicsSystem));
+    
     world.AddSystem(std::make_unique<ECS::PlayerControllerSystem>());
     world.AddSystem(std::make_unique<ECS::MovementSystem>());
     world.AddSystem(std::make_unique<ECS::BoundsSystem>());
@@ -90,13 +97,17 @@ int main() {
     ECS::RenderSystem* renderSysPtr = renderSystem.get();
     world.AddSystem(std::move(renderSystem));
 
-    // Create player entity
+    // Create player entity with physics
     auto player = world.CreateEntity();
     world.AddComponent<ECS::Transform>(player, 
         ECS::Transform(glm::vec3(0.0f, 5.0f, 0.0f)));
     world.AddComponent<ECS::Velocity>(player, ECS::Velocity());
     world.AddComponent<ECS::Renderable>(player, 
         ECS::Renderable(ECS::MeshType::Cube, glm::vec3(0.2f, 0.8f, 0.2f)));
+    world.AddComponent<ECS::RigidBody>(player, 
+        ECS::RigidBody(1.0f, ECS::RigidBodyType::Dynamic));
+    world.AddComponent<ECS::Collider>(player, 
+        ECS::Collider::Box(glm::vec3(1.0f, 1.0f, 1.0f)));
     world.AddComponent<ECS::Input>(player, ECS::Input());
     world.AddComponent<ECS::Tag>(player, ECS::Tag("Player"));
 
@@ -115,15 +126,20 @@ int main() {
     for (int i = 0; i < CUBE_COUNT; i++) {
         auto cube = world.CreateEntity();
         
-        glm::vec3 position(posDistX(gen), posDistY(gen), posDistZ(gen));
+        glm::vec3 position(posDistX(gen), posDistY(gen) + 10.0f, posDistZ(gen));
         glm::vec3 scale(scaleDist(gen));
         world.AddComponent<ECS::Transform>(cube, 
             ECS::Transform(position, glm::quat(1.0f, 0.0f, 0.0f, 0.0f), scale));
         
-        glm::vec3 linearVel(velDist(gen), velDist(gen), velDist(gen));
-        glm::vec3 angularVel(angVelDist(gen), angVelDist(gen), angVelDist(gen));
-        world.AddComponent<ECS::Velocity>(cube, 
-            ECS::Velocity(linearVel, angularVel));
+        // Add physics to cubes
+        auto rb = ECS::RigidBody(scale.x * 1.0f, ECS::RigidBodyType::Dynamic);
+        rb.linearVelocity = glm::vec3(velDist(gen), 0, velDist(gen));
+        rb.angularVelocity = glm::vec3(angVelDist(gen), angVelDist(gen), angVelDist(gen));
+        rb.friction = 0.5f;
+        rb.restitution = 0.3f;
+        world.AddComponent<ECS::RigidBody>(cube, rb);
+        world.AddComponent<ECS::Collider>(cube, 
+            ECS::Collider::Box(scale));
         
         glm::vec3 color(colorDist(gen), colorDist(gen), colorDist(gen));
         world.AddComponent<ECS::Renderable>(cube, 
@@ -132,19 +148,19 @@ int main() {
         world.AddComponent<ECS::Tag>(cube, ECS::Tag("Cube"));
     }
 
-    // Create some static cubes as ground
-    for (int x = -5; x <= 5; x++) {
-        for (int z = -5; z <= 5; z++) {
-            auto ground = world.CreateEntity();
-            world.AddComponent<ECS::Transform>(ground,
-                ECS::Transform(glm::vec3(x * 4.0f, -2.0f, z * 4.0f),
-                              glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
-                              glm::vec3(2.0f, 0.1f, 2.0f)));
-            world.AddComponent<ECS::Renderable>(ground,
-                ECS::Renderable(ECS::MeshType::Cube, glm::vec3(0.3f, 0.3f, 0.3f)));
-            world.AddComponent<ECS::Tag>(ground, ECS::Tag("Ground"));
-        }
-    }
+    // Create static ground plane with physics
+    auto ground = world.CreateEntity();
+    world.AddComponent<ECS::Transform>(ground,
+        ECS::Transform(glm::vec3(0.0f, -5.0f, 0.0f),
+                      glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
+                      glm::vec3(100.0f, 0.1f, 100.0f)));
+    world.AddComponent<ECS::RigidBody>(ground,
+        ECS::RigidBody(0.0f, ECS::RigidBodyType::Static));
+    world.AddComponent<ECS::Collider>(ground,
+        ECS::Collider::Box(glm::vec3(100.0f, 0.1f, 100.0f)));
+    world.AddComponent<ECS::Renderable>(ground,
+        ECS::Renderable(ECS::MeshType::Cube, glm::vec3(0.3f, 0.3f, 0.3f)));
+    world.AddComponent<ECS::Tag>(ground, ECS::Tag("Ground"));
 
     std::cout << "Controls:" << std::endl;
     std::cout << "  WASD - Move player" << std::endl;
@@ -154,7 +170,10 @@ int main() {
     std::cout << "  Right Mouse + Move - Look around" << std::endl;
     std::cout << "  1 - Spawn new cube at player position" << std::endl;
     std::cout << "  2 - Remove random cube" << std::endl;
-    std::cout << "  3 - Toggle cube visibility" << std::endl;
+    std::cout << "  3 - Toggle cube spinning" << std::endl;
+    std::cout << "  4 - Toggle gravity" << std::endl;
+    std::cout << "  5 - Apply random impulse to cubes" << std::endl;
+    std::cout << "  6 - Reset cube positions" << std::endl;
     std::cout << "  ESC - Exit" << std::endl;
 
     bool cubeSpin = true;
@@ -174,6 +193,9 @@ int main() {
         static bool key1Pressed = false;
         static bool key2Pressed = false;
         static bool key3Pressed = false;
+        static bool key4Pressed = false;
+        static bool key5Pressed = false;
+        static bool key6Pressed = false;
 
         // Spawn cube at player position (key 1)
         if (glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS && !key1Pressed) {
@@ -189,8 +211,17 @@ int main() {
                         glm::vec3 spawnPos = playerTransform->position + playerTransform->GetForward() * 3.0f;
                         world.AddComponent<ECS::Transform>(cube,
                             ECS::Transform(spawnPos, glm::quat(1.0f, 0.0f, 0.0f, 0.0f), glm::vec3(1.0f)));
-                        world.AddComponent<ECS::Velocity>(cube,
-                            ECS::Velocity(playerTransform->GetForward() * 10.0f, glm::vec3(1.0f, 2.0f, 0.5f)));
+                        
+                        // Add physics to spawned cube
+                        auto rb = ECS::RigidBody(1.0f, ECS::RigidBodyType::Dynamic);
+                        rb.linearVelocity = playerTransform->GetForward() * 10.0f;
+                        rb.angularVelocity = glm::vec3(1.0f, 2.0f, 0.5f);
+                        rb.friction = 0.4f;
+                        rb.restitution = 0.6f;
+                        world.AddComponent<ECS::RigidBody>(cube, rb);
+                        world.AddComponent<ECS::Collider>(cube,
+                            ECS::Collider::Box(glm::vec3(1.0f)));
+                        
                         world.AddComponent<ECS::Renderable>(cube,
                             ECS::Renderable(ECS::MeshType::Cube, glm::vec3(1.0f, 0.0f, 1.0f)));
                         world.AddComponent<ECS::Tag>(cube, ECS::Tag("Spawned"));
@@ -218,8 +249,16 @@ int main() {
             
             if (!cubes.empty()) {
                 std::uniform_int_distribution<> cubeDist(0, cubes.size() - 1);
-                world.DestroyEntity(cubes[cubeDist(gen)]);
-                std::cout << "Removed a cube! (" << cubes.size() - 1 << " remaining)" << std::endl;
+                auto cubeToRemove = cubes[cubeDist(gen)];
+                
+                // Remove physics body first
+                auto* rb = world.GetComponent<ECS::RigidBody>(cubeToRemove);
+                if (rb && rb->bulletBody) {
+                    physicsSysPtr->DestroyRigidBody(cubeToRemove);
+                }
+                
+                world.DestroyEntity(cubeToRemove);
+                std::cout << "Removed a cube! (" << (cubes.size() - 1) << " remaining)" << std::endl;
             }
         }
         if (glfwGetKey(window, GLFW_KEY_2) == GLFW_RELEASE) {
@@ -235,17 +274,98 @@ int main() {
         if (glfwGetKey(window, GLFW_KEY_3) == GLFW_RELEASE) {
             key3Pressed = false;
         }
+        
+        // Toggle gravity (key 4)
+        if (glfwGetKey(window, GLFW_KEY_4) == GLFW_PRESS && !key4Pressed) {
+            key4Pressed = true;
+            bool gravityEnabled = physicsSysPtr->IsGravityEnabled();
+            physicsSysPtr->EnableGravity(!gravityEnabled);
+            std::cout << "Gravity: " << (!gravityEnabled ? "ON" : "OFF") << std::endl;
+        }
+        if (glfwGetKey(window, GLFW_KEY_4) == GLFW_RELEASE) {
+            key4Pressed = false;
+        }
+        
+        // Apply random impulse to all cubes (key 5)
+        if (glfwGetKey(window, GLFW_KEY_5) == GLFW_PRESS && !key5Pressed) {
+            key5Pressed = true;
+            int count = 0;
+            for (auto& entity : world.GetAllEntities()) {
+                auto* tag = world.GetComponent<ECS::Tag>(entity);
+                auto* rb = world.GetComponent<ECS::RigidBody>(entity);
+                if (tag && (tag->name == "Cube" || tag->name == "Spawned")) {
+                    if (rb && rb->bulletBody) {
+                        glm::vec3 impulse(
+                            (rand() % 20 - 10) * 20.0f,  // Increased force
+                            (rand() % 10 + 5) * 30.0f,   // Increased force
+                            (rand() % 20 - 10) * 20.0f   // Increased force
+                        );
+                        physicsSysPtr->ApplyImpulse(entity, impulse);
+                        count++;
+                    } else {
+                        std::cout << "WARNING: Cube has no physics body!" << std::endl;
+                    }
+                }
+            }
+            std::cout << "Applied random impulse to " << count << " cubes!" << std::endl;
+        }
+        if (glfwGetKey(window, GLFW_KEY_5) == GLFW_RELEASE) {
+            key5Pressed = false;
+        }
+        
+        // Reset cube positions (key 6)
+        if (glfwGetKey(window, GLFW_KEY_6) == GLFW_PRESS && !key6Pressed) {
+            key6Pressed = true;
+            for (auto& entity : world.GetAllEntities()) {
+                auto* tag = world.GetComponent<ECS::Tag>(entity);
+                if (tag && (tag->name == "Cube" || tag->name == "Spawned")) {
+                    auto* transform = world.GetComponent<ECS::Transform>(entity);
+                    auto* rb = world.GetComponent<ECS::RigidBody>(entity);
+                    if (transform && rb && rb->bulletBody) {
+                        transform->position.y = std::abs(transform->position.y) + 15.0f;
+                        transform->position.x = (rand() % 80 - 40) * 0.5f;
+                        transform->position.z = (rand() % 80 - 40) * 0.5f;
+                        // Sync transform to physics for dynamic bodies
+                        physicsSysPtr->SyncTransformToBullet(entity);
+                        physicsSysPtr->SetLinearVelocity(entity, glm::vec3(0.0f));
+                        physicsSysPtr->SetAngularVelocity(entity, glm::vec3(0.0f));
+                    }
+                }
+            }
+            std::cout << "Reset all cube positions!" << std::endl;
+        }
+        if (glfwGetKey(window, GLFW_KEY_6) == GLFW_RELEASE) {
+            key6Pressed = false;
+        }
 
         // Apply continuous spin to non-player cubes if enabled
         if (cubeSpin) {
             spinTime += deltaTime;
             for (auto& entity : world.GetAllEntities()) {
                 auto* tag = world.GetComponent<ECS::Tag>(entity);
-                if (tag && tag->name == "Cube") {
-                    auto* velocity = world.GetComponent<ECS::Velocity>(entity);
-                    if (!velocity) {
-                        world.AddComponent<ECS::Velocity>(entity, 
-                            ECS::Velocity(glm::vec3(0.0f), glm::vec3(0.5f, 1.0f, 0.2f)));
+                if (tag && (tag->name == "Cube" || tag->name == "Spawned")) {
+                    auto* rb = world.GetComponent<ECS::RigidBody>(entity);
+                    if (rb && rb->bulletBody) {
+                        // Set angular velocity for physics bodies
+                        physicsSysPtr->SetAngularVelocity(entity, glm::vec3(0.5f, 1.0f, 0.2f));
+                    } else {
+                        // For non-physics entities, use velocity component
+                        auto* velocity = world.GetComponent<ECS::Velocity>(entity);
+                        if (!velocity) {
+                            world.AddComponent<ECS::Velocity>(entity, 
+                                ECS::Velocity(glm::vec3(0.0f), glm::vec3(0.5f, 1.0f, 0.2f)));
+                        }
+                    }
+                }
+            }
+        } else {
+            // Stop spinning when disabled
+            for (auto& entity : world.GetAllEntities()) {
+                auto* tag = world.GetComponent<ECS::Tag>(entity);
+                if (tag && (tag->name == "Cube" || tag->name == "Spawned")) {
+                    auto* rb = world.GetComponent<ECS::RigidBody>(entity);
+                    if (rb && rb->bulletBody) {
+                        physicsSysPtr->SetAngularVelocity(entity, glm::vec3(0.0f));
                     }
                 }
             }
