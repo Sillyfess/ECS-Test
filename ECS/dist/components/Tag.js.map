@@ -1,0 +1,1 @@
+{"version":3,"file":"Tag.js","sourceRoot":"","sources":["../../src/components/Tag.ts"],"names":[],"mappings":";;;AAAA,4CAAyC;AAEzC,MAAa,GAAI,SAAQ,qBAAS;IAG9B,YAAY,IAAY;QACpB,KAAK,EAAE,CAAC;QACR,IAAI,CAAC,IAAI,GAAG,IAAI,CAAC;IACrB,CAAC;IAEM,KAAK;QACR,OAAO,IAAI,GAAG,CAAC,IAAI,CAAC,IAAI,CAAC,CAAC;IAC9B,CAAC;CACJ;AAXD,kBAWC"}

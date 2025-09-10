@@ -1,0 +1,1 @@
+{"version":3,"file":"HealthSystem.d.ts","sourceRoot":"","sources":["../../src/systems/HealthSystem.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,MAAM,EAAE,MAAM,WAAW,CAAC;AAGnC,qBAAa,YAAa,SAAQ,MAAM;IACpC,OAAO,CAAC,iBAAiB,CAAgB;;IAQlC,MAAM,CAAC,SAAS,EAAE,MAAM,GAAG,IAAI;IAY/B,UAAU,CAAC,SAAS,EAAE,MAAM,GAAG,IAAI;CAM7C"}

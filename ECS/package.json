@@ -1,0 +1,15 @@
+{
+  "name": "ecs-system",
+  "version": "1.0.0",
+  "description": "High-performance Entity Component System",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "test": "node dist/test.js",
+    "dev": "tsc && node dist/test.js"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
+  }
+}

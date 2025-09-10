@@ -1,0 +1,1 @@
+{"version":3,"file":"Velocity.d.ts","sourceRoot":"","sources":["../../src/components/Velocity.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,SAAS,EAAE,MAAM,cAAc,CAAC;AAEzC,qBAAa,QAAS,SAAQ,SAAS;IAC5B,EAAE,EAAE,MAAM,CAAC;IACX,EAAE,EAAE,MAAM,CAAC;IACX,EAAE,EAAE,MAAM,CAAC;gBAEN,EAAE,SAAI,EAAE,EAAE,SAAI,EAAE,EAAE,SAAI;IAO3B,KAAK,IAAI,QAAQ;CAG3B"}
